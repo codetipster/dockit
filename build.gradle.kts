@@ -25,6 +25,8 @@ subprojects {
     }
 
     dependencies {
+        implementation("com.github.javaparser:javaparser-core:3.25.4")
+        implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.20")
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
         implementation("org.jetbrains.kotlin:kotlin-reflect")
 
