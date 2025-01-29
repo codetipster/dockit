@@ -7,3 +7,4 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.20")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 }
+

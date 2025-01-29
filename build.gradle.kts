@@ -1,4 +1,7 @@
 @file:Suppress("UnstableApiUsage")
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.jvm.toolchain.JvmVendorSpec
 
 plugins {
     kotlin("jvm") version "1.9.20" apply false
@@ -16,12 +19,20 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "kotlin")
+    apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "java")
 
     java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+
+        }
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    tasks.withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = "17"
     }
 
     dependencies {
@@ -30,16 +41,27 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
         implementation("org.jetbrains.kotlin:kotlin-reflect")
 
-        // Logging
         implementation("org.slf4j:slf4j-api:2.0.7")
         implementation("ch.qos.logback:logback-classic:1.4.7")
 
-        // Testing
         testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
         testImplementation("io.mockk:mockk:1.13.8")
     }
 
     tasks.test {
         useJUnitPlatform()
+    }
+
+    configure<SourceSetContainer> {
+        named("main") {
+            java.srcDir("src/main/java")
+            java.srcDir("src/main/kotlin")
+            resources.srcDir("src/main/resources")
+        }
+        named("test") {
+            java.srcDir("src/test/java")
+            java.srcDir("src/test/kotlin")
+            resources.srcDir("src/test/resources")
+        }
     }
 }

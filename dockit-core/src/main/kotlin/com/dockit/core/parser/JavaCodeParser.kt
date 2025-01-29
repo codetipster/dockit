@@ -1,4 +1,5 @@
 package com.dockit.core.parser
+import com.dockit.core.model.*
 
 import com.github.javaparser.JavaParser
 import com.github.javaparser.ast.CompilationUnit

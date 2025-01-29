@@ -7,8 +7,7 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiManager
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.psi.KtClass
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi.KtNamedFunction
-import org.jetbrains.kotlin.psi.KtProperty
+import org.jetbrains.kotlin.psi.KtPsiFactory
 import com.dockit.core.model.*
 
 class KotlinCodeParser {
@@ -22,13 +21,13 @@ class KotlinCodeParser {
                 EnvironmentConfigFiles.JVM_CONFIG_FILES
             )
 
-            val psiFile = PsiManager.getInstance(environment.project)
-                .findFile(KotlinPsiFileFactory.createFile(environment.project, sourceCode)) as KtFile
+            // Use KtPsiFactory to create a PSI file from the source code
+            val psiFile = KtPsiFactory(environment.project).createFile(sourceCode)
 
             val ktClass = psiFile.declarations.filterIsInstance<KtClass>().firstOrNull() ?: return null
 
             return ClassInfo(
-                name = ktClass.name ?: "",
+                name = ktClass.name?: "",
                 packageName = psiFile.packageFqName.asString(),
                 methods = extractMethods(ktClass),
                 fields = extractFields(ktClass),
