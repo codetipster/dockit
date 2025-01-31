@@ -2,12 +2,21 @@ package com.dockit.core.parser
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.DisplayName
+import com.dockit.core.model.*
 
 class JavaCodeParserTest {
-    private val parser = JavaCodeParser()
+    private lateinit var parser: JavaCodeParser
+
+    @BeforeEach
+    fun setUp() {
+        parser = JavaCodeParser()
+    }
 
     @Test
-    fun `parse should extract class name correctly`() {
+    @DisplayName("Basic class parsing - name and package")
+    fun `should parse basic class information correctly`() {
         val sourceCode = """
             package com.example;
             
@@ -20,36 +29,33 @@ class JavaCodeParserTest {
 
         assertNotNull(result)
         assertEquals("TestClass", result?.name)
-    }
-
-    @Test
-    fun `parse should extract package name correctly`() {
-        val sourceCode = """
-            package com.example;
-            
-            public class TestClass {
-                // Class content
-            }
-        """.trimIndent()
-
-        val result = parser.parse(sourceCode)
-
-        assertNotNull(result)
         assertEquals("com.example", result?.packageName)
     }
 
     @Test
-    fun `parse should extract methods with parameters and return types correctly`() {
+    @DisplayName("Method parsing with full details")
+    fun `should parse methods with all details correctly`() {
         val sourceCode = """
             package com.example;
             
+            import java.util.List;
+            
             public class TestClass {
-                public String testMethod(int param1, String param2) {
-                    return "";
+                /**
+                 * Process items in the list.
+                 * @param items the items to process
+                 * @return processed result
+                 * @throws IllegalArgumentException if items is null
+                 */
+                public String processItems(List<String> items) throws IllegalArgumentException {
+                    if (items == null) {
+                        throw new IllegalArgumentException("Items cannot be null");
+                    }
+                    return items.toString();
                 }
                 
-                private void anotherMethod() {
-                    // Method content
+                private void helperMethod() {
+                    // Helper implementation
                 }
             }
         """.trimIndent()
@@ -59,32 +65,43 @@ class JavaCodeParserTest {
         assertNotNull(result)
         assertEquals(2, result?.methods?.size)
 
-        val method1 = result?.methods?.get(0)
-        assertEquals("testMethod", method1?.name)
-        assertEquals("String", method1?.returnType)
-        assertEquals(listOf("public"), method1?.modifiers)
-        assertEquals(2, method1?.parameters?.size)
-        assertEquals("param1", method1?.parameters?.get(0)?.name)
-        assertEquals("int", method1?.parameters?.get(0)?.type)
-        assertEquals("param2", method1?.parameters?.get(1)?.name)
-        assertEquals("String", method1?.parameters?.get(1)?.type)
+        val processMethod = result?.methods?.find { it.name == "processItems" }
+        assertNotNull(processMethod)
+        assertEquals("String", processMethod?.returnType)
+        assertEquals(listOf("public"), processMethod?.modifiers)
+        assertEquals(1, processMethod?.parameters?.size)
+        assertEquals("items", processMethod?.parameters?.get(0)?.name)
+        assertEquals("List<String>", processMethod?.parameters?.get(0)?.type)
+        assertEquals(listOf("IllegalArgumentException"), processMethod?.throws)
 
-        val method2 = result?.methods?.get(1)
-        assertEquals("anotherMethod", method2?.name)
-        assertEquals("void", method2?.returnType)
-        assertEquals(listOf("private"), method2?.modifiers)
-        assertTrue(method2?.parameters?.isEmpty() == true)
+        val helperMethod = result?.methods?.find { it.name == "helperMethod" }
+        assertNotNull(helperMethod)
+        assertEquals("void", helperMethod?.returnType)
+        assertEquals(listOf("private"), helperMethod?.modifiers)
+        assertTrue(helperMethod?.parameters?.isEmpty() == true)
     }
 
     @Test
-    fun `parse should extract fields with modifiers correctly`() {
+    @DisplayName("Field parsing with annotations and documentation")
+    fun `should parse fields with annotations and documentation correctly`() {
         val sourceCode = """
             package com.example;
             
+            import javax.persistence.Id;
+            import javax.persistence.Column;
+            
             public class TestClass {
-                private int testField;
-                protected String anotherField;
-                public static final long CONSTANT_FIELD = 42L;
+                @Id
+                private Long id;
+                
+                /**
+                 * The name field.
+                 */
+                @Column(name = "user_name")
+                private String name;
+                
+                @Deprecated
+                public static final int OLD_CONSTANT = 42;
             }
         """.trimIndent()
 
@@ -93,68 +110,136 @@ class JavaCodeParserTest {
         assertNotNull(result)
         assertEquals(3, result?.fields?.size)
 
-        val field1 = result?.fields?.get(0)
-        assertEquals("testField", field1?.name)
-        assertEquals("int", field1?.type)
-        assertEquals(listOf("private"), field1?.modifiers)
+        val idField = result?.fields?.find { it.name == "id" }
+        assertNotNull(idField)
+        assertEquals("Long", idField?.type)
+        assertEquals(listOf("private"), idField?.modifiers)
+        assertEquals("Id", idField?.annotations?.first()?.name)
 
-        val field2 = result?.fields?.get(1)
-        assertEquals("anotherField", field2?.name)
-        assertEquals("String", field2?.type)
-        assertEquals(listOf("protected"), field2?.modifiers)
+        val nameField = result?.fields?.find { it.name == "name" }
+        assertNotNull(nameField)
+        assertTrue(nameField?.documentation?.description?.contains("name field") == true)
+        assertEquals("Column", nameField?.annotations?.first()?.name)
+        assertEquals("user_name", nameField?.annotations?.first()?.attributes?.get("name"))
 
-        val field3 = result?.fields?.get(2)
-        assertEquals("CONSTANT_FIELD", field3?.name)
-        assertEquals("long", field3?.type)
-        assertEquals(listOf("public", "static", "final"), field3?.modifiers)
+        val constantField = result?.fields?.find { it.name == "OLD_CONSTANT" }
+        assertNotNull(constantField)
+        assertEquals(listOf("public", "static", "final"), constantField?.modifiers)
+        assertEquals("42", constantField?.initializer)
     }
 
     @Test
-    fun `parse should extract dependencies correctly`() {
+    @DisplayName("Inheritance and interface implementation")
+    fun `should parse inheritance and interface implementations correctly`() {
         val sourceCode = """
             package com.example;
             
-            import java.util.List;
-            import java.util.Map;
-            import com.example.other.SomeClass;
+            import java.io.Serializable;
+            import java.util.Comparable;
             
-            public class TestClass {
-                private List<String> list;
-                private Map<String, Integer> map;
-                private SomeClass someClass;
+            public class TestClass extends BaseClass implements Serializable, Comparable<TestClass> {
+                @Override
+                public int compareTo(TestClass other) {
+                    return 0;
+                }
             }
         """.trimIndent()
 
         val result = parser.parse(sourceCode)
 
         assertNotNull(result)
-        val expectedDependencies = listOf(
-            "java.util.List",
-            "java.util.Map",
-            "com.example.other.SomeClass"
-        )
-        assertEquals(expectedDependencies.sorted(), result?.dependencies?.sorted())
+        assertEquals("BaseClass", result?.superClass)
+        assertEquals(listOf("Serializable", "Comparable<TestClass>").sorted(), result?.interfaces?.sorted())
     }
 
     @Test
-    fun `parse should handle class without package declaration`() {
+    @DisplayName("Method body analysis")
+    fun `should analyze method body correctly`() {
         val sourceCode = """
+        package com.example;
+        
+        import java.util.List;
+        import java.util.ArrayList;
+        
+        public class TestClass {
+            private List<String> items = new ArrayList<>();
+            
+            public void processItems() {
+                String localVar = "test";
+                items.add(localVar);
+                System.out.println(items.size());
+            }
+        }
+    """.trimIndent()
+
+        val result = parser.parse(sourceCode)
+        assertNotNull(result, "Parse result should not be null")
+
+        val method = result?.methods?.first()
+        assertNotNull(method, "Method should not be null")
+
+        println("Found fields: ${result?.fields?.map { it.name }}")
+        println("Method accesses fields: ${method?.accessesField}")
+        println("Method local variables: ${method?.localVariables}")
+        println("Method invocations: ${method?.methodInvocations}")
+
+        assertTrue(method?.accessesField?.contains("items") == true,
+            "Should detect 'items' field access, found: ${method?.accessesField}")
+        assertTrue(method?.localVariables?.contains("localVar") == true,
+            "Should detect 'localVar' local variable, found: ${method?.localVariables}")
+        assertTrue(method?.methodInvocations?.any { it.contains("List.add") } == true,
+            "Should detect List.add invocation, found: ${method?.methodInvocations}")
+        assertTrue(method?.methodInvocations?.any { it.contains("System.out.println") } == true,
+            "Should detect System.out.println invocation, found: ${method?.methodInvocations}")
+    }
+
+    @Test
+    @DisplayName("Documentation and Javadoc")
+    fun `should parse documentation and javadoc correctly`() {
+        val sourceCode = """
+            package com.example;
+            
+            /**
+             * Test class documentation.
+             * @author John Doe
+             * @since 1.0
+             */
             public class TestClass {
-                private String field;
+                /**
+                 * Process the given value.
+                 * @param value the input value
+                 * @return processed result
+                 * @throws IllegalArgumentException if value is invalid
+                 * @see SomeOtherClass
+                 * @deprecated Use newProcess instead
+                 */
+                public String process(String value) {
+                    return value;
+                }
             }
         """.trimIndent()
 
         val result = parser.parse(sourceCode)
 
         assertNotNull(result)
-        assertEquals("", result?.packageName)
-        assertEquals("TestClass", result?.name)
+        assertNotNull(result?.documentation)
+        assertTrue(result?.documentation?.description?.contains("Test class") == true)
+
+        val method = result?.methods?.first()
+        assertNotNull(method?.documentation)
+        assertEquals("Process the given value.", method?.documentation?.description?.trim())
+        assertEquals("the input value", method?.documentation?.params?.get("value"))
+        assertNotNull(method?.documentation?.returns)
+        assertEquals("if value is invalid", method?.documentation?.throws?.get("IllegalArgumentException"))
+        assertTrue(method?.documentation?.see?.contains("SomeOtherClass") == true)
+        assertNotNull(method?.documentation?.deprecated)
     }
 
     @Test
-    fun `parse should return null for invalid source code`() {
-        val sourceCode = "invalid code"
-        val result = parser.parse(sourceCode)
+    @DisplayName("Invalid source code handling")
+    fun `should handle invalid source code gracefully`() {
+        val invalidCode = "this is not valid java code"
+        val result = parser.parse(invalidCode)
         assertNull(result)
     }
 }

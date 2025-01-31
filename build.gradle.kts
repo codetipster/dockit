@@ -15,6 +15,8 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
+        maven("https://www.jetbrains.com/intellij-repository/releases")
     }
 }
 
@@ -25,7 +27,6 @@ subprojects {
     java {
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(17))
-
         }
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -36,14 +37,24 @@ subprojects {
     }
 
     dependencies {
+        // JavaParser
         implementation("com.github.javaparser:javaparser-core:3.25.4")
-        implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.20")
-        implementation("org.jetbrains.kotlin:kotlin-stdlib")
-        implementation("org.jetbrains.kotlin:kotlin-reflect")
+        implementation("com.github.javaparser:javaparser-symbol-solver-core:3.25.4")
 
+        // Kotlin
+        implementation("org.jetbrains.kotlin:kotlin-compiler-embeddable:1.9.20")
+        implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.20")
+        implementation("org.jetbrains.kotlin:kotlin-reflect:1.9.20")
+        implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.20")
+        implementation("org.jetbrains.kotlin:kotlin-scripting-compiler:1.9.20")
+
+        // Utilities
         implementation("org.slf4j:slf4j-api:2.0.7")
         implementation("ch.qos.logback:logback-classic:1.4.7")
+        implementation("io.github.classgraph:classgraph:4.8.165")
+        implementation("org.javassist:javassist:3.29.2-GA")
 
+        // Testing
         testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
         testImplementation("io.mockk:mockk:1.13.8")
     }
