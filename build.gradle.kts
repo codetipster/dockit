@@ -48,6 +48,8 @@ subprojects {
         implementation("org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable:1.9.20")
         implementation("org.jetbrains.kotlin:kotlin-scripting-compiler:1.9.20")
 
+        implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
         // Utilities
         implementation("org.slf4j:slf4j-api:2.0.7")
         implementation("ch.qos.logback:logback-classic:1.4.7")

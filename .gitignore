@@ -2,3 +2,4 @@ target/
 build/
 .gradle/
 .idea/
+dockit-nlp/src/main/resources/config.properties
